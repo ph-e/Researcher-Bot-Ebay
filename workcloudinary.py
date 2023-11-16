@@ -23,7 +23,7 @@ def parse(product_url):
         pattern = r'"(https://i\.ebayimg\.com/images/[^"]*/s-l1600\.(jpg|png))"'
         matches = re.findall(pattern, text)
         for match in matches:
-            if match[0] not in dataarray:  # Проверка на уникальность
+            if match[0] not in dataarray:  # Uniqueness check
                 dataarray.append(match[0])
 
         print('Information copied successfully')
