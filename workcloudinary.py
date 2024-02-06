@@ -23,7 +23,7 @@ def parse(product_url):
         pattern = r'"(https://i\.ebayimg\.com/images/[^"]*/s-l1600\.(jpg|png))"'
         matches = re.findall(pattern, text)
         for match in matches:
-            if match[0] not in dataarray:  # Uniqueness check
+            if match[0] not in dataarray:  # Проверка на уникальность
                 dataarray.append(match[0])
 
         print('Information copied successfully')
@@ -74,6 +74,8 @@ def getLinks(urlSeller):
         text = response.text
         pattern = r'https://www\.ebay\.com/itm/[^"\s]+'
         links = re.findall(pattern, text)
+        # Удаляем строку "> <div" из каждой ссылки
+        links = [re.sub(r'><div', '', link) for link in links]
         return links
     return ''
 
@@ -81,6 +83,9 @@ def main():
 
     #We get a link to the product page
     urlSeller = input("Enter the link to the seller's page:")
+
+    #Count of images
+    countIMG = int(input("Enter the maximum number of images to upload:"))
 
     #Open a text document for reading
     with open("config.txt", "r") as file:
@@ -106,26 +111,30 @@ def main():
     #Receiving a link to the seller's items
     links = getLinks(urlSeller)
     info = []
+    processed_links = set()
     for idx, link in enumerate(links):
-        if link != "":
-            info = parse(link)
-            worksheet.cell(row=idx+1, column=1, value=link)
-            for index, item in enumerate(info):
-                if index >= 5:  # upload no more than 4 photos
-                    break
-                if index == 0:
-                    worksheet.cell(row=idx+1, column=2, value=info[0])
-                else:
-                    image_url = item
-                    image_path = f"downloaded_images/{idx+1}.jpg"
-                    try:
-                        if image_url:
-                            download_image(image_url, image_path)
-                            urlIMG = upload_image_to_cloudinary(api_key, api_secret, cloud_name, image_path)
-                            os.remove(image_path)
-                            worksheet.cell(row=idx+1, column=index+2, value=urlIMG)
-                    except Exception as e:
-                        print(f"ERROR Failed to download image: {e}")
+        if link not in processed_links: # checking for duplicate links
+            if link != "":
+                processed_links.add(link)
+                info = parse(link)
+                indexRow = len(processed_links)
+                worksheet.cell(row=indexRow, column=1, value=link)
+                for index, item in enumerate(info):
+                    if index > countIMG:  # upload no more than count photos
+                        break
+                    if index == 0:
+                        worksheet.cell(row=indexRow, column=2, value=info[0])
+                    else:
+                        image_url = item
+                        image_path = f"downloaded_images/{indexRow}.jpg"
+                        try:
+                            if image_url:
+                                download_image(image_url, image_path)
+                                urlIMG = upload_image_to_cloudinary(api_key, api_secret, cloud_name, image_path)
+                                os.remove(image_path)
+                                worksheet.cell(row=indexRow, column=index+2, value=urlIMG)
+                        except Exception as e:
+                            print(f"ERROR Failed to download image: {e}")
 
     #Generating a random file name
     file_name = ''.join(random.choice(string.ascii_letters + string.digits) for i in range(8))                    
