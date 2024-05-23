@@ -6,6 +6,7 @@ import os
 import random
 import string
 from bs4 import BeautifulSoup
+from datetime import datetime
 
 def parse(product_url):
     #We receive the title and links to product photos on ebay
@@ -31,7 +32,9 @@ def parse(product_url):
             price_span = price_div.find('span', class_='ux-textspans')
     
             if price_span:
-                dataarray.append('Price: ' + price_span.text)
+                
+                number_str = ''.join(filter(lambda x: x.isdigit() or x == '.', price_span.text))
+                dataarray.append(number_str)
 
 
 
@@ -54,8 +57,11 @@ def parse(product_url):
         if len(delivery_div) >= 2:
             delivery_values_div = delivery_div[1]
             spans = delivery_values_div.find_all('span', class_='ux-textspans')
-            delivery_value = ' '.join(span.text for span in spans[:4])
-            dataarray.append(delivery_value)
+            target_date_str = spans[3]
+            current_date = datetime.now()
+            target_date = datetime.strptime(target_date_str.text + " 2024", "%a, %b %d %Y")
+            delivery_date = target_date - current_date
+            dataarray.append(f"{delivery_date.days} days")
 
         # Extrecting Seller
         seller_info_div = soup.find('div', class_='x-sellercard-atf__info__about-seller')
